@@ -31,7 +31,10 @@
 *.out
 *.app
 
-.vs
+*.vs
 
-bin
+.vs
+/bin
+/game/obj
+/raylib-5.5/obj
 
