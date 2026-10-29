@@ -18,34 +18,81 @@ public:
     Vector2 position = Vector2{ 0,0 };
     Vector2 velocity = Vector2{ 0,0 };
     float mass = 1.0f;
+    float gravityScale = 1.0f;
     float drag = 0.01f;
-    Color color = RED;
+    Color color = YELLOW;
     float radius = 10.0f;
     
 
 };
 
+
+bool isOverlapping(PhysicsBody a, PhysicsBody b)
+{
+    Vector2 disp = b.position - a.position;
+    float dist = Vector2LengthSqr(disp);
+    float sumRadius = a.radius + b.radius;
+    return dist < sumRadius * sumRadius;
+}
+
+
 //Class to contain global properties of Physics simulation, and to operate on them each frame
 class PhysicsSimulation
 {
 public:
-    std::vector<PhysicsBody> bodies; // A container of all PhysicsBody in the simulation
+    
     Vector2 gravity = { 0, 200 }; // Global acceleration due to gravity, in pixels/second/second
     const float FIXED_DELTA_TIME = 1.0f / (float)TARGET_FPS; // A fixed delta time variable is important to physics simulations
 
+
+    void CheckCollisions()
+    {
+
+        for (int i = 0; i < bodies.size(); i++)
+        {
+            bodies[i].color = GREEN;
+        }
+
+        //Check Collisions
+        for (int i = 0; i < bodies.size(); i++)
+        {
+
+            for (int j = 1; j < bodies.size(); j++)
+            {
+                if (isOverlapping(bodies[i], bodies[j]))
+                {
+                    bodies[i].color = RED;
+                    bodies[j].color = RED;
+                }
+                else 
+                {
+                    bodies[i].color = GREEN;
+                    bodies[j].color = GREEN;
+                }
+
+            }
+
+        }
+    }
+
     void Update()
     {
+        //update positions w/ kinematics
         for (int i = 0; i < bodies.size(); i++)
         {
             //PhysicsBody body = bodies[i];
             //velocity is defined in pixels/second --> we need pixels/frame
             bodies[i].position += bodies[i].velocity * FIXED_DELTA_TIME;
             //acceleration is change in velocity over time, gravity is our acceleration in pixels/sec/sec
-            bodies[i].velocity += gravity * FIXED_DELTA_TIME;
+
+            bodies[i].velocity += gravity * bodies[i].gravityScale * FIXED_DELTA_TIME;
+
 
             //Apply drag to counteract velocity!
             bodies[i].velocity *= 1.0f - (bodies[i].drag * FIXED_DELTA_TIME);
         }
+
+        CheckCollisions();
     }
 
     void Draw()
@@ -55,6 +102,13 @@ public:
             DrawCircleV(bodies[i].position, bodies[i].radius, bodies[i].color);
         }
     }
+
+    void Add(PhysicsBody body)
+    {
+        bodies.push_back(body);
+    }
+private:
+    std::vector<PhysicsBody> bodies; // A container of all PhysicsBody in the simulation
 };
 
 //PhysicsBody bird;// = { Vector2{-1000,-1000}, Vector2{0,0} };
@@ -65,12 +119,21 @@ float launchPositionAdjustmentSpeed = 50.0f;
 float launchSpeed = 100.0f; // Speed of the bird when launched
 float launchAngle = 0.0f; // Angle to launch bird, from horizontal, in degrees
 float spawnDrag = 0.0f; // damping value to apply to physics object velocities
+float spawnRadius = 10.0f;
 
 int main()
 {
 
     InitWindow(screenWidth, screenHeight, "Mitch Elborn 101614291");
     SetTargetFPS(TARGET_FPS);
+
+
+    PhysicsBody target;
+    target.radius = 50;
+    target.position = { 900, (float)screenHeight - 200 };
+    target.gravityScale = 0.0f;
+    sim.Add(target);
+
 
     launchPosition = { 30, (float)(screenHeight - 50) };
 
@@ -88,6 +151,9 @@ int main()
 
         GuiSlider(Rectangle{ 100, 60, 100, 20 }, "Gravity", TextFormat("%.2f", sim.gravity.y), &sim.gravity.y, -1000, 1000);
         GuiSlider(Rectangle{ 100, 90, 100, 20 }, "Drag", TextFormat("%.2f", spawnDrag), &spawnDrag, 0, 10);
+
+        GuiSlider(Rectangle{ 100, 120, 100, 20 }, "Radius", TextFormat("%.2f", spawnRadius), &spawnRadius, 2, 50);
+
 
         if (IsKeyDown(KEY_UP))
         {
@@ -107,13 +173,13 @@ int main()
         if (IsKeyPressed(KEY_SPACE))
         {
             PhysicsBody birdToLaunch;
-            birdToLaunch.color = RED;
-            birdToLaunch.radius = 10;
+            birdToLaunch.color = YELLOW;
+            birdToLaunch.radius = spawnRadius;
             birdToLaunch.position = launchPosition;
             birdToLaunch.velocity = velocityPreview;
             birdToLaunch.drag = spawnDrag;
 
-            sim.bodies.push_back(birdToLaunch);
+            sim.Add(birdToLaunch);
         }
 
         sim.Update();
